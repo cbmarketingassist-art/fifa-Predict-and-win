@@ -118,7 +118,7 @@ function initLoginScreen() {
       state = 'phone';
       nameGroup.classList.add('hidden');
       welcomeGroup.classList.add('hidden');
-      loginBtn.textContent = 'CONTINUE →';
+      loginBtn.textContent = 'START PREDICTING →';
     }
   });
 
