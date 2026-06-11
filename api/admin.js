@@ -1,4 +1,5 @@
 import { redis, redisPipeline, hashToObj, cors } from './_db.js';
+import { FIXTURES } from './fixtures.js';
 
 const ADMIN_PASSCODE = process.env.ADMIN_PASSCODE || '4321';
 
@@ -49,6 +50,24 @@ export default async function handler(req, res) {
         'winner', winner || '',
         'updatedAt', now
       );
+
+      if (process.env.GOOGLE_SHEET_WEBHOOK && winner) {
+        const matchDetails = FIXTURES.find(m => String(m.id) === String(matchId));
+        const matchName = matchDetails ? `${matchDetails.team1?.name || 'TBD'} vs ${matchDetails.team2?.name || 'TBD'}` : `Match ${matchId}`;
+        
+        const payload = {
+          'Match Name': matchName,
+          'Match Date': matchDetails?.date || '',
+          'Match Time': matchDetails?.timeIST || '',
+          'Winner Team Name': winner
+        };
+
+        fetch(process.env.GOOGLE_SHEET_WEBHOOK, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sheetTab: 'Prediction', type: 'result_update', data: payload })
+        }).catch(err => console.error('Webhook error:', err));
+      }
 
       return res.status(200).json({ success: true });
     }

@@ -1,4 +1,5 @@
 import { redis, redisPipeline, hashToObj, cors } from './_db.js';
+import { FIXTURES } from './fixtures.js';
 
 export default async function handler(req, res) {
   cors(res);
@@ -70,10 +71,23 @@ export default async function handler(req, res) {
 
       // Async webhook trigger
       if (process.env.GOOGLE_SHEET_WEBHOOK) {
+        const matchDetails = FIXTURES.find(m => String(m.id) === String(matchId));
+        const matchName = matchDetails ? `${matchDetails.team1?.name || 'TBD'} vs ${matchDetails.team2?.name || 'TBD'}` : `Match ${matchId}`;
+        
+        const webhookPayload = {
+          phone: pred.phone,
+          'Match Name': matchName,
+          'Match Date': matchDetails?.date || '',
+          'Match Time': matchDetails?.timeIST || '',
+          'Predicted Team Name': pred.teamName,
+          submittedAt: pred.submittedAt,
+          changedAt: pred.changedAt
+        };
+
         fetch(process.env.GOOGLE_SHEET_WEBHOOK, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: isUpdate ? 'prediction_update' : 'prediction', data: pred })
+          body: JSON.stringify({ sheetTab: 'Prediction', type: isUpdate ? 'prediction_update' : 'prediction', data: webhookPayload })
         }).catch(err => console.error('Webhook error:', err));
       }
 

@@ -52,7 +52,7 @@ export default async function handler(req, res) {
         fetch(process.env.GOOGLE_SHEET_WEBHOOK, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: 'user', data: user })
+          body: JSON.stringify({ sheetTab: 'User Registration', type: 'user', data: user })
         }).catch(err => console.error('Webhook error:', err));
       }
 
