@@ -1,4 +1,10 @@
-let MATCHES = [];
+var MATCHES = []; // var (not let) so window.MATCHES works — db.js reads scores from it
+
+// ── Prediction window (per T&C) ───────────────
+//  Opens 6 hours before kick-off
+//  Closes 30 minutes before kick-off
+const PRED_OPEN_MS  = 6 * 60 * 60 * 1000;
+const PRED_CLOSE_MS = 30 * 60 * 1000;
 
 async function fetchMatches() {
   try {
@@ -18,15 +24,16 @@ function getMatchStatus(match) {
   // Server-side status override (set by admin)
   if (match.statusOverride) return match.statusOverride;
 
-  const now = new Date();
+  const now   = new Date();
   const start = getMatchDateTime(match);
-  const predictionOpens = new Date(start.getTime() - 4 * 60 * 60 * 1000); // 4 hours before
-  const matchEnds       = new Date(start.getTime() + 2 * 60 * 60 * 1000); // 2 hours after
+  const predictionOpens  = new Date(start.getTime() - PRED_OPEN_MS);
+  const predictionCloses = new Date(start.getTime() - PRED_CLOSE_MS);
+  const matchEnds        = new Date(start.getTime() + 2 * 60 * 60 * 1000);
 
-  if (window.__DEMO_MODE__) return 'open';
-  if (now < predictionOpens) return 'upcoming';
-  if (now >= predictionOpens && now < start) return 'open';
-  if (now >= start && now < matchEnds) return 'live';
+  if (now < predictionOpens)  return 'upcoming';
+  if (now < predictionCloses) return 'open';
+  if (now < start)            return 'locked';   // form closed, match not started
+  if (now < matchEnds)        return 'live';
   return 'finished';
 }
 
@@ -39,29 +46,32 @@ function formatMatchTime(match) {
   return match.timeIST + ' IST';
 }
 
-function timeUntilMatch(match) {
-  const now  = new Date();
-  const start = getMatchDateTime(match);
-  const diff = start - now;
-  if (diff <= 0) return null;
+function _fmtDiff(diff, withSeconds) {
   const h = Math.floor(diff / 3600000);
   const m = Math.floor((diff % 3600000) / 60000);
   const s = Math.floor((diff % 60000) / 1000);
   if (h >= 24) { const d = Math.floor(h / 24); return d + 'd ' + (h % 24) + 'h'; }
   if (h > 0) return h + 'h ' + m + 'm';
-  if (m > 0) return m + 'm ' + s + 's';
+  if (m > 0) return withSeconds ? m + 'm ' + s + 's' : m + 'm';
   return s + 's';
 }
 
-function timeUntilPredictionOpens(match) {
-  const now = new Date();
-  const start = getMatchDateTime(match);
-  const opens = new Date(start.getTime() - 4 * 60 * 60 * 1000);
-  const diff = opens - now;
+function timeUntilMatch(match) {
+  const diff = getMatchDateTime(match) - new Date();
   if (diff <= 0) return null;
-  const h = Math.floor(diff / 3600000);
-  const m = Math.floor((diff % 3600000) / 60000);
-  if (h >= 24) { const d = Math.floor(h / 24); return d + 'd ' + (h % 24) + 'h'; }
-  if (h > 0) return h + 'h ' + m + 'm';
-  return m + 'm';
+  return _fmtDiff(diff, true);
+}
+
+function timeUntilPredictionOpens(match) {
+  const opens = new Date(getMatchDateTime(match).getTime() - PRED_OPEN_MS);
+  const diff = opens - new Date();
+  if (diff <= 0) return null;
+  return _fmtDiff(diff, false);
+}
+
+function timeUntilPredictionCloses(match) {
+  const closes = new Date(getMatchDateTime(match).getTime() - PRED_CLOSE_MS);
+  const diff = closes - new Date();
+  if (diff <= 0) return null;
+  return _fmtDiff(diff, true);
 }

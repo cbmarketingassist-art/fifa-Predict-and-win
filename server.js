@@ -1,3 +1,8 @@
+// ─────────────────────────────────────────────
+//  Local dev server — static files + mock API
+//  Production uses Vercel serverless functions in /api (Redis-backed).
+//  This mock mirrors those endpoints in-memory so the app runs locally.
+// ─────────────────────────────────────────────
 const http = require('http');
 const fs   = require('fs');
 const path = require('path');
@@ -13,15 +18,38 @@ const MIME = {
   '.json': 'application/json',
 };
 
+// ── In-memory mock stores ─────────────────────
+const mockUsers = {};       // phone → user
+const mockPredictions = {}; // `${phone}_${matchId}` → prediction
+
+function json(res, code, data) {
+  res.writeHead(code, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+  res.end(JSON.stringify(data));
+}
+
+function readBody(req) {
+  return new Promise(resolve => {
+    let body = '';
+    req.on('data', c => body += c);
+    req.on('end', () => {
+      try { resolve(JSON.parse(body || '{}')); } catch { resolve({}); }
+    });
+  });
+}
+
+// Mock matches — times tuned for the prediction window:
+// opens 6h before kick-off, closes 30 min before
 function matchesHandler(res) {
   const now = new Date();
   const fmt  = d => d.toISOString().split('T')[0];
   const fmtT = d => d.toLocaleTimeString('en-IN', { hour12: false, hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' });
 
-  const pastDate     = new Date(now - 48 * 3600000);
-  const liveDate     = new Date(now - 30 * 60000);
-  const openDate     = new Date(now + 60 * 60000);
-  const upcomingDate = new Date(now + 4 * 3600000);
+  const t = now.getTime();
+  const pastDate     = new Date(t - 48 * 3600000);
+  const liveDate     = new Date(t - 30 * 60000);   // started 30 min ago → LIVE
+  const lockedDate   = new Date(t + 15 * 60000);   // kicks off in 15 min → form CLOSED
+  const openDate     = new Date(t + 90 * 60000);   // kicks off in 90 min → OPEN (closes in 60m)
+  const upcomingDate = new Date(t + 9 * 3600000);  // kicks off in 9 h → UPCOMING (opens in 3h)
 
   const matches = [
     {
@@ -43,37 +71,75 @@ function matchesHandler(res) {
       date: fmt(liveDate), timeIST: fmtT(liveDate),
       team1: { name: 'Portugal', flag: '🇵🇹', flagCode: 'pt', color: '#006600', colorDark: '#003D00' },
       team2: { name: 'DR Congo', flag: '🇨🇩', flagCode: 'cd', color: '#007FFF', colorDark: '#004C99' },
-      group: 'Group K', stage: 'Group Stage'
+      group: 'Group K', stage: 'Group Stage',
+      score: { team1Score: 2, team2Score: 1, minute: 34 }
     },
     {
       id: 4,
-      date: fmt(openDate), timeIST: fmtT(openDate),
+      date: fmt(lockedDate), timeIST: fmtT(lockedDate),
       team1: { name: 'Czechia',      flag: '🇨🇿', flagCode: 'cz', color: '#D7141A', colorDark: '#85090F' },
       team2: { name: 'South Africa', flag: '🇿🇦', flagCode: 'za', color: '#007A4D', colorDark: '#004A2F' },
       group: 'Group A', stage: 'Group Stage'
     },
     {
       id: 5,
-      date: fmt(upcomingDate), timeIST: fmtT(upcomingDate),
+      date: fmt(openDate), timeIST: fmtT(openDate),
       team1: { name: 'Netherlands', flag: '🇳🇱', flagCode: 'nl', color: '#FF6600', colorDark: '#993D00' },
       team2: { name: 'Sweden',      flag: '🇸🇪', flagCode: 'se', color: '#006AA7', colorDark: '#004066' },
       group: 'Group F', stage: 'Group Stage'
+    },
+    {
+      id: 6,
+      date: fmt(upcomingDate), timeIST: fmtT(upcomingDate),
+      team1: { name: 'Argentina', flag: '🇦🇷', flagCode: 'ar', color: '#74ACDF', colorDark: '#4A7BA8' },
+      team2: { name: 'Japan',     flag: '🇯🇵', flagCode: 'jp', color: '#BC002D', colorDark: '#7A001E' },
+      group: 'Group J', stage: 'Group Stage'
     }
   ];
 
-  res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
-  res.end(JSON.stringify(matches));
+  json(res, 200, matches);
 }
 
-const server = http.createServer((req, res) => {
-  let urlPath = req.url.split('?')[0];
+async function usersHandler(req, res, query) {
+  if (req.method === 'POST') {
+    const body = await readBody(req);
+    if (!body.phone) return json(res, 400, { error: 'phone required' });
+    mockUsers[body.phone] = { ...mockUsers[body.phone], ...body, updatedAt: new Date().toISOString() };
+    return json(res, 200, mockUsers[body.phone]);
+  }
+  if (query.get('all')) return json(res, 200, Object.values(mockUsers));
+  const phone = query.get('phone');
+  const user = phone ? mockUsers[phone] : null;
+  return json(res, 200, user || {});
+}
 
-  // API routes
-  if (urlPath === '/api/matches') { matchesHandler(res); return; }
+async function predictionsHandler(req, res, query) {
+  if (req.method === 'POST') {
+    const body = await readBody(req);
+    const { phone, matchId, teamName } = body;
+    if (!phone || !matchId || !teamName) return json(res, 400, { error: 'missing fields' });
+    const key = `${phone}_${matchId}`;
+    const updated = !!mockPredictions[key];
+    mockPredictions[key] = { phone, matchId, teamName, submittedAt: new Date().toISOString(), ...(updated ? { changedAt: new Date().toISOString() } : {}), updated };
+    return json(res, 200, mockPredictions[key]);
+  }
+  return json(res, 200, Object.values(mockPredictions));
+}
+
+const server = http.createServer(async (req, res) => {
+  const [rawPath, rawQuery] = req.url.split('?');
+  const query = new URLSearchParams(rawQuery || '');
+  let urlPath = rawPath;
+
+  // API routes (mock — mirrors /api serverless functions)
+  if (urlPath === '/api/matches')     { matchesHandler(res); return; }
+  if (urlPath === '/api/users')       { await usersHandler(req, res, query); return; }
+  if (urlPath === '/api/predictions') { await predictionsHandler(req, res, query); return; }
 
   // Page aliases
   if (urlPath === '/')      urlPath = '/index.html';
   if (urlPath === '/admin') urlPath = '/admin.html';
+  if (urlPath === '/terms') urlPath = '/terms.html';
 
   const filePath = path.join(__dirname, urlPath);
 
@@ -92,4 +158,4 @@ const server = http.createServer((req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`⚽ FIFA 26 Predictor running at http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`⚽ World Cup 26 Play & Win running at http://localhost:${PORT}`));

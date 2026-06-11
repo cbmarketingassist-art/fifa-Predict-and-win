@@ -185,9 +185,11 @@ function buildMatchCard(match) {
     return card;
   }
 
+  const closesIn = timeUntilPredictionCloses(match);
   const statusLabels = {
     upcoming: `<span class="status-badge upcoming time-ticker" data-match-id="${match.id}">⏱ ${countdown || 'Soon'}</span>`,
-    open:     `<span class="status-badge open pulse-badge">🟢 PREDICT NOW</span>`,
+    open:     `<span class="status-badge open pulse-badge close-ticker" data-match-id="${match.id}">🟢 OPEN<span class="badge-close-in">· closes in ${closesIn || '…'}</span></span>`,
+    locked:   `<span class="status-badge locked">🔒 CLOSED</span>`,
     live:     `<span class="status-badge live pulse-badge">🔴 LIVE</span>`,
     finished: `<span class="status-badge finished">✓ DONE</span>`
   };
@@ -313,6 +315,7 @@ function renderHomeScreen() {
   MATCHES.forEach(m => {
     const s = getMatchStatus(m);
     if (s === 'open')          open.push(m);
+    else if (s === 'locked')   open.push(m);   // form closed, kick-off soon — keep visible at top
     else if (s === 'live')     live.push(m);
     else if (s === 'upcoming') upcoming.push(m);
     else                        past.push(m);
@@ -341,8 +344,6 @@ function renderHomeScreen() {
     pastList.appendChild(more);
   }
 
-  document.getElementById('demoBanner').style.display = window.__DEMO_MODE__ ? 'flex' : 'none';
-  document.getElementById('demoBtn').style.display    = window.__DEMO_MODE__ ? 'none' : 'flex';
 }
 
 function showAllUpcoming() {
@@ -389,7 +390,7 @@ function openPredictScreen(matchId) {
 
   const statusBadgeEl = document.getElementById('predictStatusBadge');
   const badgeMap = {
-    open: ['open', 'OPEN'], live: ['live', 'LIVE'],
+    open: ['open', 'OPEN'], locked: ['locked', 'CLOSED'], live: ['live', 'LIVE'],
     upcoming: ['upcoming', 'UPCOMING'], finished: ['finished', 'DONE']
   };
   const [cls, label] = badgeMap[status] || ['upcoming', 'UPCOMING'];
@@ -401,13 +402,16 @@ function openPredictScreen(matchId) {
   const hasPredicted = Predictions.hasUserPredicted(matchId);
   const canChange = Predictions.canChangePrediction(matchId);
 
+  // Form-closure countdown (visible only while open)
+  updateCloseCountdown(match, status);
+
   if (status === 'open' && canChange) {
     // User has predicted but can change — show slider with "change" mode
     sliderView.classList.remove('hidden');
     resultView.classList.add('hidden');
     resetSlider();
     showChangeMode(match);
-  } else if (hasPredicted || status === 'live' || status === 'finished') {
+  } else if (hasPredicted || status === 'locked' || status === 'live' || status === 'finished') {
     sliderView.classList.add('hidden');
     resultView.classList.remove('hidden');
     showResultView(matchId, match);
@@ -422,6 +426,18 @@ function openPredictScreen(matchId) {
   }
 
   Screens.show('predict');
+}
+
+function updateCloseCountdown(match, status) {
+  const el = document.getElementById('predCloseCountdown');
+  if (!el) return;
+  if (status === 'open') {
+    const closesIn = timeUntilPredictionCloses(match);
+    el.innerHTML = `⏳ Predictions close in <span class="cc-time">${closesIn || '…'}</span>`;
+    el.style.display = 'flex';
+  } else {
+    el.style.display = 'none';
+  }
 }
 
 function showChangeMode(match) {
@@ -468,7 +484,6 @@ function showResultView(matchId, match) {
     }
   }
 
-  DB.seedDemoPredictions(matchId, match.team1.name, match.team2.name);
   const stats = Predictions.getStats(matchId);
   document.getElementById('splitBar1').style.width      = stats.team1.pct + '%';
   document.getElementById('splitBar2').style.width      = stats.team2.pct + '%';
@@ -684,33 +699,6 @@ function renderPicksScreen() {
 }
 
 // ─────────────────────────────────────────────
-//  Demo Mode — First 3 matches go live
-// ─────────────────────────────────────────────
-function enableDemoMode() {
-  window.__DEMO_MODE__ = true;
-  // Auto-fill demo phone for quick access
-  const phoneInput = document.getElementById('phoneInput');
-  if (phoneInput && Screens.getCurrent() === 'login') {
-    phoneInput.value = '7001684412';
-    phoneInput.dispatchEvent(new Event('input'));
-  }
-  renderHomeScreen();
-}
-
-function toggleDemoMode() {
-  window.__DEMO_MODE__ = false;
-  renderHomeScreen();
-}
-
-let _tapCount = 0, _tapTimer = null;
-function logoTap() {
-  _tapCount++;
-  clearTimeout(_tapTimer);
-  _tapTimer = setTimeout(() => { _tapCount = 0; }, 2000);
-  if (_tapCount >= 5) { enableDemoMode(); _tapCount = 0; }
-}
-
-// ─────────────────────────────────────────────
 //  Nav
 // ─────────────────────────────────────────────
 function initNav() {
@@ -744,11 +732,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (el) Screens.register(id, el);
   });
 
-  // Check for demo mode via URL param
-  if (new URLSearchParams(window.location.search).has('demo')) {
-    window.__DEMO_MODE__ = true;
-  }
-
   try {
     await fetchMatches();
   } catch (err) { console.error('fetchMatches failed:', err); }
@@ -770,8 +753,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (user) enterApp();
     else Screens.show('login');
   }, 2400);
-
-  document.getElementById('splashLogo')?.addEventListener('click', logoTap);
 
   document.getElementById('logoutBtn')?.addEventListener('click', () => {
     Auth.logout();
@@ -802,7 +783,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
     }
 
-    // Countdown tickers
+    // Countdown tickers — "opens in" on upcoming cards
     document.querySelectorAll('.time-ticker').forEach(el => {
       const matchId = parseInt(el.dataset.matchId);
       const match = MATCHES.find(m => m.id === matchId);
@@ -816,19 +797,47 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
     });
 
-    // Predict screen countdown
-    const sliderHint = document.getElementById('sliderHint');
-    if (sliderHint && Screens.getCurrent() === 'predict' && _predictMatchId) {
+    // Form-closure tickers — "closes in" on open cards
+    document.querySelectorAll('.close-ticker').forEach(el => {
+      const matchId = parseInt(el.dataset.matchId);
+      const match = MATCHES.find(m => m.id === matchId);
+      if (!match) return;
+      const status = getMatchStatus(match);
+      if (status === 'open') {
+        const closesIn = timeUntilPredictionCloses(match);
+        const span = el.querySelector('.badge-close-in');
+        if (span) span.textContent = `· closes in ${closesIn || '…'}`;
+      } else if (Screens.getCurrent() === 'home') {
+        // Form just closed — re-render so card flips to 🔒 CLOSED
+        renderHomeScreen();
+      }
+    });
+
+    // Predict screen countdowns
+    if (Screens.getCurrent() === 'predict' && _predictMatchId) {
       const match = MATCHES.find(m => m.id === _predictMatchId);
-      if (match && getMatchStatus(match) === 'upcoming') {
-        const predOpens = timeUntilPredictionOpens(match);
-        sliderHint.textContent = predOpens
-          ? `Predictions open in ${predOpens}`
-          : `Predictions open in ${timeUntilMatch(match) || 'soon'}`;
-      } else if (match && getMatchStatus(match) === 'open') {
-        const btn = document.getElementById('submitPredBtn');
-        if (btn && btn.disabled && sliderHint.textContent.includes('open in')) {
-          openPredictScreen(_predictMatchId);
+      if (match) {
+        const status = getMatchStatus(match);
+        const sliderHint = document.getElementById('sliderHint');
+
+        updateCloseCountdown(match, status);
+
+        if (status === 'upcoming' && sliderHint) {
+          const predOpens = timeUntilPredictionOpens(match);
+          sliderHint.textContent = predOpens
+            ? `Predictions open in ${predOpens}`
+            : `Predictions open in ${timeUntilMatch(match) || 'soon'}`;
+        } else if (status === 'open' && sliderHint) {
+          const btn = document.getElementById('submitPredBtn');
+          if (btn && btn.disabled && sliderHint.textContent.includes('open in')) {
+            openPredictScreen(_predictMatchId);
+          }
+        } else if (status === 'locked') {
+          // Form just closed while user was on the slider — flip to result view
+          const sliderView = document.getElementById('sliderView');
+          if (sliderView && !sliderView.classList.contains('hidden')) {
+            openPredictScreen(_predictMatchId);
+          }
         }
       }
     }

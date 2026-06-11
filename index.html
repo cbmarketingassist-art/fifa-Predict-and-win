@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#050a14">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Chai Break · World Cup 26 Predictor</title>
+  <title>Chai Break · World Cup 26 Play & Win</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -31,9 +31,9 @@
         <span class="divider-diamond">◆</span>
         <span class="divider-line"></span>
       </div>
-      <p class="splash-subtitle" style="margin-top:10px; margin-bottom:5px;">Predictor by</p>
+      <p class="splash-subtitle">Play &amp; Win by</p>
       <div class="splash-brand-row">
-        <img src="img/chai_break_logo.jpg" alt="Chai Break" class="brand-logo-splash">
+        <img src="img/chai_break_logo.png" alt="Chai Break" class="brand-logo-splash">
       </div>
       <div class="splash-loader"><div class="loader-bar"></div></div>
     </div>
@@ -43,10 +43,10 @@
   <div id="screen-login" class="screen">
     <div class="login-hero">
       <div class="login-badge">WORLD CUP 26</div>
-      <h2 class="login-title">PREDICTOR</h2>
+      <h2 class="login-title">PLAY &amp; WIN</h2>
       <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; margin-top:20px; gap:10px;">
         <span class="login-sub" style="margin:0; letter-spacing:3px;">BY</span>
-        <img src="img/chai_break_logo.jpg" alt="Chai Break" class="brand-logo-login-hero">
+        <img src="img/chai_break_logo.png" alt="Chai Break" class="brand-logo-login-hero">
       </div>
     </div>
     <div class="login-form-wrap">
@@ -83,7 +83,7 @@
 
         <button class="btn-primary full-width" id="loginBtn" style="margin-top:12px">START PREDICTING →</button>
       </div>
-      <p class="login-footer">Correct prediction = Beverage Break unlocked</p>
+      <p class="login-footer">Correct prediction = 25% OFF on beverages<br><a href="terms.html" class="tnc-link">Terms &amp; Conditions apply</a></p>
     </div>
   </div>
 
@@ -91,9 +91,9 @@
   <div id="screen-home" class="screen">
     <div class="app-header">
       <div class="header-left">
-        <img src="img/chai_break_logo.jpg" alt="Chai Break" class="brand-logo-header" onclick="logoTap()">
+        <img src="img/chai_break_logo.png" alt="Chai Break" class="brand-logo-header">
         <div>
-          <p class="app-name">World Cup 26 Predictor</p>
+          <p class="app-name">World Cup 26 · Play &amp; Win</p>
         </div>
       </div>
       <div class="header-right">
@@ -110,11 +110,6 @@
         </div>
         <button id="logoutBtn" style="background:transparent; border:1px solid #444; color:#aaa; font-size:10px; border-radius:4px; padding:3px 6px; margin-left:8px; cursor:pointer;">Log Out</button>
       </div>
-    </div>
-
-    <div class="demo-banner" id="demoBanner" style="display:none;">
-      <span>🎮 DEMO MODE — All matches open</span>
-      <button onclick="toggleDemoMode()">EXIT</button>
     </div>
 
     <div class="screen-content" id="homeContent">
@@ -134,15 +129,8 @@
         <h2 class="section-title">Completed</h2>
         <div class="match-list" id="pastMatchesList"></div>
       </section>
+      <p class="home-tnc"><a href="terms.html" class="tnc-link">Terms &amp; Conditions</a></p>
     </div>
-
-    <button class="demo-btn" id="demoBtn" onclick="enableDemoMode()">
-      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px;vertical-align:middle">
-        <rect x="2" y="6" width="20" height="12" rx="2"/>
-        <line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/>
-        <circle cx="16" cy="11" r="1"/><circle cx="18" cy="13" r="1"/>
-      </svg>Demo
-    </button>
 
     <nav class="bottom-nav">
       <button class="nav-item active" data-screen="home">
@@ -210,6 +198,7 @@
       <div class="predict-zone">
         <div id="sliderView">
           <p class="predict-instruction">Who will win this match?</p>
+          <p class="close-countdown" id="predCloseCountdown" style="display:none"></p>
           <div class="slider-arena" id="sliderArena">
             <div class="team-zone tz-left" id="tzLeft" style="--tz-color:#DD0000">
               <div class="tz-flag" id="tzFlag1"></div>
@@ -270,10 +259,9 @@
   <div id="screen-picks" class="screen">
     <div class="app-header">
       <div class="header-left">
-        <div class="app-logo" style="pointer-events:none">CB</div>
+        <img src="img/chai_break_logo.png" alt="Chai Break" class="brand-logo-header" style="pointer-events:none">
         <div>
           <p class="app-name">My Predictions</p>
-          <p class="app-brand">chai break</p>
         </div>
       </div>
     </div>
