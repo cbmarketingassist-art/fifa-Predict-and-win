@@ -258,15 +258,15 @@ body::after {
 
 .splash-fifa {
   font-family: var(--font-head);
-  font-size: 46px;
+  font-size: 32px;
   line-height: 1;
-  letter-spacing: 4px;
+  letter-spacing: 2px;
   color: #fff;
 }
 
 .splash-year {
   font-family: var(--font-head);
-  font-size: 54px;
+  font-size: 36px;
   line-height: 1;
   letter-spacing: 0;
   background: linear-gradient(135deg, var(--gold), #d4a810);
@@ -275,6 +275,11 @@ body::after {
   background-clip: text;
   filter: drop-shadow(0 0 20px rgba(240,200,80,0.4));
 }
+
+/* ── Logo Overrides ── */
+.brand-logo-splash { height: 56px; border-radius: 6px; }
+.brand-logo-login-hero { height: 48px; border-radius: 6px; }
+.brand-logo-header { height: 40px; border-radius: 4px; }
 
 .splash-divider {
   display: flex;
