@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#050a14">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Chai Break · FIFA 26 Predictor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flag-icons@7.2.3/css/flag-icons.min.css">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- SPLASH -->
+  <div id="screen-splash" class="screen active">
+    <div class="splash-content" id="splashLogo">
+      <div class="splash-emblem">
+        <div class="splash-emblem-ring"></div>
+        <img src="img/ball.png" alt="FIFA Ball" class="splash-ball-svg" style="border-radius: 50%; object-fit: cover;">
+      </div>
+      <div class="splash-wordmark">
+        <span class="splash-fifa">FIFA</span>
+        <span class="splash-year">26</span>
+      </div>
+      <div class="splash-divider">
+        <span class="divider-line"></span>
+        <span class="divider-diamond">◆</span>
+        <span class="divider-line"></span>
+      </div>
+      <div class="splash-brand-row">
+        <img src="img/chai_break_logo.jpg" alt="Chai Break" class="brand-logo-splash">
+      </div>
+      <p class="splash-subtitle">World Cup Predictor</p>
+      <div class="splash-loader"><div class="loader-bar"></div></div>
+    </div>
+  </div>
+
+  <!-- LOGIN -->
+  <div id="screen-login" class="screen">
+    <div class="login-hero">
+      <div class="login-badge">FIFA 2026</div>
+      <h2 class="login-title">PREDICTOR</h2>
+      <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; margin-top:20px; gap:10px;">
+        <span class="login-sub" style="margin:0; letter-spacing:3px;">PRESENTED BY</span>
+        <img src="img/chai_break_logo.jpg" alt="Chai Break" class="brand-logo-login-hero">
+      </div>
+    </div>
+    <div class="login-form-wrap">
+      <div class="login-card">
+        <h3>Enter the Arena</h3>
+        <p class="login-hint">Your phone number is your unique player ID.</p>
+
+        <div class="input-group" id="phoneGroup">
+          <label for="phoneInput">Phone Number</label>
+          <div class="phone-input-wrap">
+            <span class="phone-prefix" id="phonePrefix">+91</span>
+            <input type="tel" id="phoneInput" name="phone" placeholder="10-digit number"
+              maxlength="10" inputmode="numeric" pattern="[0-9]*" autocomplete="tel-national">
+          </div>
+          <span class="input-error" id="phoneError"></span>
+        </div>
+
+        <div class="input-group hidden" id="nameGroup">
+          <label for="nameInput">Your Name</label>
+          <input type="text" id="nameInput" name="name" placeholder="What should we call you?"
+            autocomplete="given-name" autocorrect="off" autocapitalize="words">
+          <span class="input-error" id="nameError"></span>
+        </div>
+
+        <div class="input-group hidden" id="welcomeGroup">
+          <div class="welcome-back">
+            <span class="wb-icon">👋</span>
+            <div>
+              <p class="wb-title">WELCOME BACK</p>
+              <p class="wb-name" id="welcomeName">—</p>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-primary full-width" id="loginBtn" style="margin-top:12px">CONTINUE →</button>
+      </div>
+      <p class="login-footer">One prediction per phone number · Chai Break FIFA 26</p>
+    </div>
+  </div>
+
+  <!-- HOME -->
+  <div id="screen-home" class="screen">
+    <div class="app-header">
+      <div class="header-left">
+        <img src="img/chai_break_logo.jpg" alt="Chai Break" class="brand-logo-header" onclick="logoTap()">
+        <div>
+          <p class="app-name">FIFA 26 Predictor</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <a href="admin.html" class="admin-header-btn hidden" id="adminBtn">
+          <!-- shield icon -->
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          ADMIN
+        </a>
+        <div class="user-badge">
+          <span class="user-initial" id="userInitial">?</span>
+          <span class="user-name" id="userName">Guest</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="demo-banner" id="demoBanner" style="display:none;">
+      <span>🎮 DEMO MODE — All matches open</span>
+      <button onclick="toggleDemoMode()">EXIT</button>
+    </div>
+
+    <div class="screen-content" id="homeContent">
+      <section class="match-section" id="openMatchesSection" style="display:none;">
+        <h2 class="section-title"><span class="dot open"></span>Open for Prediction</h2>
+        <div class="match-list" id="openMatchesList"></div>
+      </section>
+      <section class="match-section" id="liveMatchesSection" style="display:none;">
+        <h2 class="section-title"><span class="dot live-dot"></span>Live Now</h2>
+        <div class="match-list" id="liveMatchesList"></div>
+      </section>
+      <section class="match-section">
+        <h2 class="section-title">Upcoming Matches</h2>
+        <div class="match-list" id="upcomingMatchesList"></div>
+      </section>
+      <section class="match-section" id="pastMatchesSection" style="display:none;">
+        <h2 class="section-title">Completed</h2>
+        <div class="match-list" id="pastMatchesList"></div>
+      </section>
+    </div>
+
+    <button class="demo-btn" id="demoBtn" onclick="enableDemoMode()">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px;vertical-align:middle">
+        <rect x="2" y="6" width="20" height="12" rx="2"/>
+        <line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/>
+        <circle cx="16" cy="11" r="1"/><circle cx="18" cy="13" r="1"/>
+      </svg>Demo
+    </button>
+
+    <nav class="bottom-nav">
+      <button class="nav-item active" data-screen="home">
+        <span class="nav-icon">
+          <!-- Football pitch (top-down) -->
+          <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="2.5"/>
+            <line x1="12" y1="4" x2="12" y2="20"/>
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M2 9h4v6H2M22 9h-4v6h4"/>
+          </svg>
+        </span>
+        <span>Matches</span>
+      </button>
+      <button class="nav-item" data-screen="picks">
+        <span class="nav-icon">
+          <!-- Trophy -->
+          <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
+            <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+            <path d="M4 22h16"/>
+            <path d="M10 14.66V17c0 .55-.45.99-1 .99H4v2h16v-2h-5c-.55 0-1-.44-1-.99v-2.34"/>
+            <path d="M12 2a6 6 0 0 1 6 6v5a6 6 0 0 1-12 0V8a6 6 0 0 1 6-6Z"/>
+          </svg>
+        </span>
+        <span>My Picks</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- PREDICT -->
+  <div id="screen-predict" class="screen">
+    <div class="predict-header">
+      <button class="back-btn" id="backBtn">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        Back
+      </button>
+      <div class="predict-match-info">
+        <span class="predict-group" id="predictGroup">Group E</span>
+        <span class="predict-date" id="predictDate">Sun, 14 June · 22:30 IST</span>
+      </div>
+      <span class="status-badge upcoming" id="predictStatusBadge">—</span>
+    </div>
+
+    <div class="screen-content" style="padding:16px 16px 40px">
+
+      <!-- VS Card -->
+      <div class="vs-card">
+        <div class="vs-team" id="vsTeam1">
+          <div class="vs-flag" id="vsFlag1"></div>
+          <div class="vs-name" id="vsName1">GERMANY</div>
+        </div>
+        <div class="vs-center">
+          <span class="vs-text">VS</span>
+          <span class="vs-time" id="vsTime">22:30</span>
+          <span class="vs-ist">IST</span>
+        </div>
+        <div class="vs-team" id="vsTeam2">
+          <div class="vs-flag" id="vsFlag2"></div>
+          <div class="vs-name" id="vsName2">CURAÇAO</div>
+        </div>
+      </div>
+
+      <!-- Predict zone -->
+      <div class="predict-zone">
+        <div id="sliderView">
+          <p class="predict-instruction">Who will win this match?</p>
+          <div class="slider-arena" id="sliderArena">
+            <div class="team-zone tz-left" id="tzLeft" style="--tz-color:#DD0000">
+              <div class="tz-flag" id="tzFlag1"></div>
+              <div class="tz-label" id="tzName1">GERMANY</div>
+            </div>
+            <div class="slider-middle">
+              <div class="football-ball" id="footballBall" style="left:50%">
+                <img src="img/ball.png" alt="Swipe Ball" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; display: block; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+              </div>
+              <input type="range" min="0" max="100" value="50" id="predSlider" class="pred-range" aria-label="Slide to predict">
+            </div>
+            <div class="team-zone tz-right" id="tzRight" style="--tz-color:#003DA5">
+              <div class="tz-flag" id="tzFlag2"></div>
+              <div class="tz-label" id="tzName2">CURAÇAO</div>
+            </div>
+          </div>
+          <p class="slider-hint" id="sliderHint">Slide left or right to pick your winner</p>
+          <button class="btn-primary" id="submitPredBtn" disabled>SELECT A TEAM FIRST</button>
+        </div>
+
+        <div id="resultView" class="hidden" style="padding:20px">
+          <div id="winnerDisplay" style="display:none"></div>
+          <div class="your-pick" id="yourPickDisplay">
+            <span class="pick-label">Your Pick</span>
+            <div class="pick-team">
+              <span id="pickedFlag"></span>
+              <span id="pickedName">Germany</span>
+              <span class="pick-check">✓</span>
+            </div>
+            <button class="btn-change-pred" id="changePredBtn" style="display:none" onclick="openPredictScreen(_predictMatchId)">↻ Change Prediction</button>
+          </div>
+          <div class="community-split" id="communitySplit">
+            <h3>Community Predictions</h3>
+            <div class="split-bars">
+              <div class="split-team">
+                <span class="split-flag" id="splitFlag1"></span>
+                <div class="split-bar-wrap">
+                  <div class="split-bar" id="splitBar1" style="width:50%"></div>
+                </div>
+                <span class="split-pct" id="splitPct1">50%</span>
+              </div>
+              <div class="split-team">
+                <span class="split-flag" id="splitFlag2"></span>
+                <div class="split-bar-wrap">
+                  <div class="split-bar" id="splitBar2" style="width:50%"></div>
+                </div>
+                <span class="split-pct" id="splitPct2">50%</span>
+              </div>
+            </div>
+            <p class="total-preds" id="totalPreds">0 predictions made</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MY PICKS -->
+  <div id="screen-picks" class="screen">
+    <div class="app-header">
+      <div class="header-left">
+        <div class="app-logo" style="pointer-events:none">CB</div>
+        <div>
+          <p class="app-name">My Predictions</p>
+          <p class="app-brand">chai break</p>
+        </div>
+      </div>
+    </div>
+    <div class="picks-summary">
+      <div class="summary-stat">
+        <span class="stat-num" id="totalPicksNum">0</span>
+        <span class="stat-label">Predictions</span>
+      </div>
+      <div class="summary-stat">
+        <span class="stat-num gold" id="correctPicksNum">—</span>
+        <span class="stat-label">Correct</span>
+      </div>
+    </div>
+    <div class="screen-content">
+      <div class="picks-list" id="picksList">
+        <p class="empty-state">No predictions yet.<br>Go pick some winners! 🏆</p>
+      </div>
+    </div>
+    <nav class="bottom-nav">
+      <button class="nav-item" data-screen="home">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="2.5"/>
+            <line x1="12" y1="4" x2="12" y2="20"/>
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M2 9h4v6H2M22 9h-4v6h4"/>
+          </svg>
+        </span>
+        <span>Matches</span>
+      </button>
+      <button class="nav-item active" data-screen="picks">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
+            <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+            <path d="M4 22h16"/>
+            <path d="M10 14.66V17c0 .55-.45.99-1 .99H4v2h16v-2h-5c-.55 0-1-.44-1-.99v-2.34"/>
+            <path d="M12 2a6 6 0 0 1 6 6v5a6 6 0 0 1-12 0V8a6 6 0 0 1 6-6Z"/>
+          </svg>
+        </span>
+        <span>My Picks</span>
+      </button>
+    </nav>
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/predictions.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
