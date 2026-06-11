@@ -776,6 +776,9 @@ body::after {
   line-height: 1.2;
   letter-spacing: 0.3px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
 }
 
 .app-brand {
