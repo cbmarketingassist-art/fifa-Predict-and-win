@@ -773,6 +773,11 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('splashLogo')?.addEventListener('click', logoTap);
 
+  document.getElementById('logoutBtn')?.addEventListener('click', () => {
+    Auth.logout();
+    window.location.reload();
+  });
+
   // ── Polling loop: live scores + countdowns ──────────
   let tickCount = 0;
   let lastScoreHash = '';
