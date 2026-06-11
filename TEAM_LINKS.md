@@ -7,7 +7,7 @@ Welcome to the FIFA Predictor app project! Here is a quick reference guide for t
 - **Main Application (Live URL):** [https://fifa-predictor-theta.vercel.app](https://fifa-predictor-theta.vercel.app)
 - **Admin Dashboard:** [https://fifa-predictor-theta.vercel.app/admin.html](https://fifa-predictor-theta.vercel.app/admin.html)
 - **GitHub Repository:** [https://github.com/cbmarketingassist-art/fifa-Predict-and-win](https://github.com/cbmarketingassist-art/fifa-Predict-and-win)
-- **Google Sheet (Data Sync):** *(Configured via `GOOGLE_SHEET_WEBHOOK` in Vercel. Please update this with your actual Google Sheet link)*
+- **Google Sheet (Data Sync):** [FIFA Predictor Google Sheet](https://docs.google.com/spreadsheets/d/1OqlIfPvfcbXMoDlmWYDbjnynMT1Xca6yKOVw9jt3dCc/edit?usp=sharing)
 
 ## Admin Access
 
