@@ -1,4 +1,5 @@
 .vercel
 .claude
+.env*
 fifa_predict_and_win_repo/
 test-live.mjs
