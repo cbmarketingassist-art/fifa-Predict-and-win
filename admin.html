@@ -262,11 +262,13 @@
       <div class="section-head">
         <div class="section-head-left"><div class="section-icon red">⚡</div><div><div class="section-title-text">Tournament Control</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px">Emergency controls — use carefully</div></div></div>
       </div>
-      <div style="padding:16px 22px;display:flex;gap:10px;flex-wrap:wrap;">
+      <div style="padding:16px 22px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
         <button class="emergency-btn danger" onclick="bulkStatus('upcoming')">🔒 Lock All</button>
         <button class="emergency-btn success" onclick="bulkStatus('open')">🟢 Open All</button>
         <button class="emergency-btn danger" onclick="bulkStatus('')">↺ Reset All Status</button>
         <button class="save-btn" id="refreshMatchesBtn" style="background:rgba(255,255,255,0.06);color:var(--text-sec);box-shadow:none;">↻ Refresh Data</button>
+        <button class="emergency-btn success" id="forceSyncBtn" onclick="forceSync()">⚡ Force Sync Scores</button>
+        <span id="syncStatus" style="font-size:11px;color:var(--text-muted);"></span>
       </div>
     </div>
 
@@ -760,6 +762,38 @@ function showToast(msg, isError = false) {
   t.textContent = msg;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 2800);
+}
+// ── Force Sync Scores ──
+async function forceSync() {
+  const btn    = document.getElementById('forceSyncBtn');
+  const status = document.getElementById('syncStatus');
+  btn.disabled = true;
+  btn.textContent = '⏳ Syncing…';
+  status.textContent = '';
+  status.style.color = 'var(--text-muted)';
+  try {
+    const res  = await fetch('/api/live', { method: 'POST' });
+    const data = await res.json();
+    if (data.status === 'ok') {
+      const msg = data.updated > 0
+        ? `✅ Synced ${data.updated} match${data.updated > 1 ? 'es' : ''} via ${data.source}`
+        : `ℹ️ No live matches right now (${data.source || 'source unknown'})`;
+      status.textContent = msg;
+      status.style.color = 'var(--green-light)';
+      showToast(msg);
+      await renderAll();
+    } else {
+      status.textContent = `⚠️ ${data.reason || 'Sync skipped — no API key configured'}`;
+      status.style.color = 'var(--gold)';
+    }
+  } catch (err) {
+    status.textContent = '❌ Sync failed — check console';
+    status.style.color = 'var(--red)';
+    showToast('Force sync failed', true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⚡ Force Sync Scores';
+  }
 }
 </script>
 </body>
