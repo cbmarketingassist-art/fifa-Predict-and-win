@@ -762,11 +762,24 @@ window.addEventListener('DOMContentLoaded', async () => {
   // ── Polling loop: live scores + countdowns ──────────
   let tickCount = 0;
   let lastScoreHash = '';
+  let lastLiveSyncTick = -999; // force sync immediately if there's a live match on load
 
   setInterval(async () => {
     tickCount++;
 
-    // Poll API every 30s
+    // ── Auto live-sync every 30s when a match is live ────────────────────
+    // This makes the client the cron — no paid Vercel plan needed.
+    if (tickCount % 30 === 0 || tickCount - lastLiveSyncTick >= 30) {
+      const hasLiveMatch = MATCHES.some(m => getMatchStatus(m) === 'live');
+      if (hasLiveMatch) {
+        lastLiveSyncTick = tickCount;
+        try {
+          await fetch('/api/live', { method: 'POST' });
+        } catch (e) { /* silent — admin can force-sync manually */ }
+      }
+    }
+
+    // Poll matches from API every 30s (re-render after sync so score shows)
     if (tickCount % 30 === 0) {
       await fetchMatches();
       if (Screens.getCurrent() === 'home')  renderHomeScreen();
@@ -808,7 +821,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         const span = el.querySelector('.badge-close-in');
         if (span) span.textContent = `· closes in ${closesIn || '…'}`;
       } else if (Screens.getCurrent() === 'home') {
-        // Form just closed — re-render so card flips to 🔒 CLOSED
         renderHomeScreen();
       }
     });
@@ -833,7 +845,6 @@ window.addEventListener('DOMContentLoaded', async () => {
             openPredictScreen(_predictMatchId);
           }
         } else if (status === 'locked') {
-          // Form just closed while user was on the slider — flip to result view
           const sliderView = document.getElementById('sliderView');
           if (sliderView && !sliderView.classList.contains('hidden')) {
             openPredictScreen(_predictMatchId);
