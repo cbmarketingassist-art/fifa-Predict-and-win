@@ -769,12 +769,14 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     // ── Auto live-sync every 30s when a match is live ────────────────────
     // This makes the client the cron — no paid Vercel plan needed.
+    // GET is throttled server-side (20s shared lock), so any number of
+    // open browsers produce at most ~3 upstream syncs per minute.
     if (tickCount % 30 === 0 || tickCount - lastLiveSyncTick >= 30) {
       const hasLiveMatch = MATCHES.some(m => getMatchStatus(m) === 'live');
       if (hasLiveMatch) {
         lastLiveSyncTick = tickCount;
         try {
-          await fetch('/api/live', { method: 'POST' });
+          await fetch('/api/live');
         } catch (e) { /* silent — admin can force-sync manually */ }
       }
     }
