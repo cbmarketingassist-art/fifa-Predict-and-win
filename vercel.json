@@ -6,11 +6,5 @@
     { "source": "/terms", "destination": "/terms.html" },
     { "source": "/terms.html", "destination": "/terms.html" },
     { "source": "/(.*)", "destination": "/index.html" }
-  ],
-  "crons": [
-    {
-      "path": "/api/live",
-      "schedule": "*/2 * * * *"
-    }
   ]
 }
