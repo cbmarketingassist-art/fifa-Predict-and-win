@@ -75,3 +75,28 @@ function timeUntilPredictionCloses(match) {
   if (diff <= 0) return null;
   return _fmtDiff(diff, true);
 }
+
+// ── Live match clock ──────────────────────────
+// Smooth-ticks the minute locally between ESPN syncs so it feels live,
+// re-anchoring to the server's reported minute whenever it changes. The +3
+// cap keeps a frozen feed (halftime, network gap) from running away; "HT"
+// is shown verbatim while the server reports halftime.
+const _liveClockAnchors = {}; // matchId -> { serverMin, at }
+
+function liveMatchClock(match) {
+  const sc = match.score;
+  if (!sc || sc.status === 'finished') return null;
+  if (sc.phase === 'HT') return 'HT';
+  if (sc.minute == null) return null;
+
+  const serverMin = parseInt(sc.minute);
+  if (isNaN(serverMin)) return null;
+
+  const a = _liveClockAnchors[match.id];
+  if (!a || a.serverMin !== serverMin) {
+    _liveClockAnchors[match.id] = { serverMin, at: Date.now() };
+  }
+  const anchor = _liveClockAnchors[match.id];
+  const extra  = Math.min(3, Math.floor((Date.now() - anchor.at) / 60000));
+  return (anchor.serverMin + extra) + "'";
+}

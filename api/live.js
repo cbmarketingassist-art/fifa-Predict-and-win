@@ -109,7 +109,7 @@ async function postResultToSheet(fixture, winner) {
 }
 
 // ── Write score + meta to Redis ────────────────────────────────────────────
-async function writeToRedis(fixture, team1Score, team2Score, minute, isFinished, winnerName = null) {
+async function writeToRedis(fixture, team1Score, team2Score, minute, isFinished, winnerName = null, phase = '') {
   const existing = hashToObj(await redis('HGETALL', `meta:${fixture.id}`)) || {};
 
   // Human override wins: once an admin sets a winner manually, this match is
@@ -119,13 +119,15 @@ async function writeToRedis(fixture, team1Score, team2Score, minute, isFinished,
   const nowStr = new Date().toISOString();
 
   if (!isFinished) {
-    // Live: keep the score + minute fresh on every sync.
+    // Live: keep the score + minute fresh on every sync. `phase` is 'HT' at
+    // halftime so the client freezes its clock and shows "HT".
     await redis('HSET', `score:${fixture.id}`,
       'matchId',    String(fixture.id),
       'team1Score', String(team1Score),
       'team2Score', String(team2Score),
       'minute',     minute != null ? String(minute) : '',
       'status',     'live',
+      'phase',      phase || '',
       'updatedAt',  nowStr
     );
     return;
@@ -150,6 +152,7 @@ async function writeToRedis(fixture, team1Score, team2Score, minute, isFinished,
     'team2Score', String(team2Score),
     'minute',     minute != null ? String(minute) : '',
     'status',     'finished',
+    'phase',      '',
     'updatedAt',  nowStr
   );
   await redis('HSET', `meta:${fixture.id}`,
@@ -210,7 +213,12 @@ async function syncFromESPN() {
                      : awayC.winner ? awayC.team.displayName
                      : null;
 
-    await writeToRedis(fixture, team1Score, team2Score, minute, isFinished, winnerName);
+    // Halftime → tell the client to freeze its clock at "HT". ESPN marks it
+    // as STATUS_HALFTIME / "Halftime" / "HT" while state is still 'in'.
+    const stStr = `${st.name || ''} ${st.description || ''} ${st.shortDetail || ''}`;
+    const phase = isLive && /half\s*-?\s*time/i.test(stStr) ? 'HT' : '';
+
+    await writeToRedis(fixture, team1Score, team2Score, minute, isFinished, winnerName, phase);
     updated++;
   }
 
@@ -257,7 +265,9 @@ async function syncFromApiFootball() {
                      : teams.away.winner ? teams.away.name
                      : null;
 
-    await writeToRedis(ourFixture, team1Score, team2Score, fx.status?.elapsed, isFinished, winnerName);
+    const phase = statusCode === 'HT' ? 'HT' : '';
+
+    await writeToRedis(ourFixture, team1Score, team2Score, fx.status?.elapsed, isFinished, winnerName, phase);
     updated++;
   }
 
@@ -272,13 +282,15 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Throttle client-driven GETs: one upstream sync per 20s across ALL
-  // visitors. POST (admin Force Sync) always goes through.
+  // Throttle client-driven GETs: one upstream sync per 12s across ALL
+  // visitors. Set below the client's 15s live cadence so a single viewer
+  // isn't throttled, while many concurrent viewers still cap ESPN at ~5/min.
+  // POST (admin Force Sync) always goes through.
   if (req.method === 'GET') {
     try {
-      const acquired = await redis('SET', 'sync:throttle', '1', 'NX', 'EX', '20');
+      const acquired = await redis('SET', 'sync:throttle', '1', 'NX', 'EX', '12');
       if (!acquired) {
-        return res.status(200).json({ status: 'throttled', message: 'Synced within the last 20s' });
+        return res.status(200).json({ status: 'throttled', message: 'Synced within the last 12s' });
       }
     } catch { /* Redis unavailable — let the sync attempt proceed */ }
   }

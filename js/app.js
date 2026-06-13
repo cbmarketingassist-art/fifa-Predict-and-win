@@ -205,7 +205,8 @@ function buildMatchCard(match) {
   // Live score row
   let liveScoreHTML = '';
   if (status === 'live' && liveScore) {
-    const min = liveScore.minute ? `<span class="mc-minute">${liveScore.minute}'</span>` : '';
+    const clock = liveMatchClock(match);
+    const min = clock ? `<span class="mc-minute live-minute-ticker" data-match-id="${match.id}">${clock}</span>` : '';
     liveScoreHTML = `
       <div class="mc-live-score">
         <div class="mc-score-team">
@@ -764,27 +765,21 @@ window.addEventListener('DOMContentLoaded', async () => {
   // ── Polling loop: live scores + countdowns ──────────
   let tickCount = 0;
   let lastScoreHash = '';
-  let lastLiveSyncTick = -999; // force sync immediately if there's a live match on load
 
   setInterval(async () => {
     tickCount++;
 
-    // ── Auto live-sync every 30s when a match is live ────────────────────
-    // This makes the client the cron — no paid Vercel plan needed.
-    // GET is throttled server-side (20s shared lock), so any number of
-    // open browsers produce at most ~3 upstream syncs per minute.
-    if (tickCount % 30 === 0 || tickCount - lastLiveSyncTick >= 30) {
-      const hasLiveMatch = MATCHES.some(m => getMatchStatus(m) === 'live');
+    // ── Live-aware refresh: every 15s while a match is live, else 30s ─────
+    // While live we ping /api/live (ESPN→Redis) right before re-fetching, so
+    // goals and the minute land within ~15s. The client is the cron — no paid
+    // Vercel plan needed. GET is throttled server-side (12s shared lock), so
+    // any number of open browsers cap ESPN at ~5 requests/min.
+    const hasLiveMatch = MATCHES.some(m => getMatchStatus(m) === 'live');
+    const refreshEvery = hasLiveMatch ? 15 : 30;
+    if (tickCount % refreshEvery === 0) {
       if (hasLiveMatch) {
-        lastLiveSyncTick = tickCount;
-        try {
-          await fetch('/api/live');
-        } catch (e) { /* silent — admin can force-sync manually */ }
+        try { await fetch('/api/live'); } catch (e) { /* silent — admin can force-sync */ }
       }
-    }
-
-    // Poll matches from API every 30s (re-render after sync so score shows)
-    if (tickCount % 30 === 0) {
       await fetchMatches();
       if (Screens.getCurrent() === 'home')  renderHomeScreen();
       if (Screens.getCurrent() === 'picks') renderPicksScreen();
@@ -799,6 +794,15 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (Screens.getCurrent() === 'home') renderHomeScreen();
       }
     }
+
+    // Live match clock — smooth-tick the minute every second on live cards
+    document.querySelectorAll('.live-minute-ticker').forEach(el => {
+      const matchId = parseInt(el.dataset.matchId);
+      const match = MATCHES.find(m => m.id === matchId);
+      if (!match) return;
+      const clock = liveMatchClock(match);
+      if (clock) el.textContent = clock;
+    });
 
     // Prediction-open tickers — "opens in" on upcoming cards
     document.querySelectorAll('.open-ticker').forEach(el => {

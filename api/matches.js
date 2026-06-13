@@ -36,6 +36,7 @@ export default async function handler(req, res) {
           team2Score: parseInt(scores[i].team2Score) || 0,
           minute:     scores[i].minute ? parseInt(scores[i].minute) : null,
           status:     scores[i].status || 'live',
+          phase:      scores[i].phase || '',
         };
       }
 
