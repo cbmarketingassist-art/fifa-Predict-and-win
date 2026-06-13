@@ -1,4 +1,4 @@
-import { redis } from './_db.js';
+import { redis, hashToObj } from './_db.js';
 import { FIXTURES } from './fixtures.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -86,37 +86,82 @@ function resolveScores(fixture, apiHome, apiAway, homeScore, awayScore) {
   return { team1Score: awayScore, team2Score: homeScore };
 }
 
+// ── Push a finished result to the Google Sheet ──────────────────────────────
+// Same message shape api/admin.js sends on a manual winner, so an auto result
+// lands in the sheet identically to a hand-entered one.
+async function postResultToSheet(fixture, winner) {
+  if (!process.env.GOOGLE_SHEET_WEBHOOK) return;
+  const payload = {
+    'Match Name':       `${fixture.team1?.name || 'TBD'} vs ${fixture.team2?.name || 'TBD'}`,
+    'Match Date':       fixture.date || '',
+    'Match Time':       fixture.timeIST || '',
+    'Winner Team Name': winner,
+  };
+  try {
+    await fetch(process.env.GOOGLE_SHEET_WEBHOOK, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ sheetTab: 'Prediction', type: 'result_update', data: payload }),
+    });
+  } catch (err) {
+    console.error('Sheet webhook error:', err.message);
+  }
+}
+
 // ── Write score + meta to Redis ────────────────────────────────────────────
 async function writeToRedis(fixture, team1Score, team2Score, minute, isFinished, winnerName = null) {
+  const existing = hashToObj(await redis('HGETALL', `meta:${fixture.id}`)) || {};
+
+  // Human override wins: once an admin sets a winner manually, this match is
+  // locked (meta.manual === '1') and auto-sync leaves it completely alone.
+  if (existing.manual === '1') return;
+
   const nowStr = new Date().toISOString();
-  const status = isFinished ? 'finished' : 'live';
+
+  if (!isFinished) {
+    // Live: keep the score + minute fresh on every sync.
+    await redis('HSET', `score:${fixture.id}`,
+      'matchId',    String(fixture.id),
+      'team1Score', String(team1Score),
+      'team2Score', String(team2Score),
+      'minute',     minute != null ? String(minute) : '',
+      'status',     'live',
+      'updatedAt',  nowStr
+    );
+    return;
+  }
+
+  // Prefer the provider's winner flag (covers knockout penalty shootouts,
+  // where the score alone says draw); fall back to score comparison.
+  let winner = winnerName ? normalise(winnerName) : null;
+  if (!winner) {
+    winner = 'Draw';
+    if (team1Score > team2Score) winner = fixture.team1.name;
+    else if (team2Score > team1Score) winner = fixture.team2.name;
+  }
+
+  // Dedupe: if we already recorded this exact result, do nothing — this is
+  // what stops the sheet from getting a fresh row on every 30s poll.
+  if (existing.statusOverride === 'finished' && existing.winner === winner) return;
 
   await redis('HSET', `score:${fixture.id}`,
-    'matchId',     String(fixture.id),
-    'team1Score',  String(team1Score),
-    'team2Score',  String(team2Score),
-    'minute',      minute != null ? String(minute) : '',
-    'status',      status,
-    'updatedAt',   nowStr
+    'matchId',    String(fixture.id),
+    'team1Score', String(team1Score),
+    'team2Score', String(team2Score),
+    'minute',     minute != null ? String(minute) : '',
+    'status',     'finished',
+    'updatedAt',  nowStr
+  );
+  await redis('HSET', `meta:${fixture.id}`,
+    'matchId',        String(fixture.id),
+    'statusOverride', 'finished',
+    'winner',         winner,
+    'source',         'auto',
+    'updatedAt',      nowStr
   );
 
-  if (isFinished) {
-    // Prefer the provider's winner flag (covers knockout penalty shootouts,
-    // where the score alone says draw); fall back to score comparison.
-    let winner = winnerName ? normalise(winnerName) : null;
-    if (!winner) {
-      winner = 'Draw';
-      if (team1Score > team2Score) winner = fixture.team1.name;
-      else if (team2Score > team1Score) winner = fixture.team2.name;
-    }
-
-    await redis('HSET', `meta:${fixture.id}`,
-      'matchId',        String(fixture.id),
-      'statusOverride', 'finished',
-      'winner',         winner,
-      'updatedAt',      nowStr
-    );
-  }
+  // First time this result is seen (or the winner changed) → post once.
+  await postResultToSheet(fixture, winner);
 }
 
 // ── Source 1: ESPN public scoreboard ────────────────────────────────────────

@@ -44,10 +44,15 @@ export default async function handler(req, res) {
       if (!matchId) return res.status(400).json({ error: 'matchId required' });
 
       const now = new Date().toISOString();
+      // When an admin sets a winner, lock the match (manual='1') so the ESPN
+      // auto-sync stops overwriting their correction. Use the Reset button
+      // (resetMatch deletes meta) to hand control back to auto-sync.
       await redis('HSET', `meta:${matchId}`,
         'matchId', String(matchId),
         'statusOverride', statusOverride || '',
         'winner', winner || '',
+        'manual', winner ? '1' : '',
+        'source', 'manual',
         'updatedAt', now
       );
 
