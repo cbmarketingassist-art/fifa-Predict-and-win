@@ -186,8 +186,9 @@ function buildMatchCard(match) {
   }
 
   const closesIn = timeUntilPredictionCloses(match);
+  const opensIn  = timeUntilPredictionOpens(match);
   const statusLabels = {
-    upcoming: `<span class="status-badge upcoming time-ticker" data-match-id="${match.id}">⏱ ${countdown || 'Soon'}</span>`,
+    upcoming: `<span class="status-badge upcoming open-ticker" data-match-id="${match.id}">⏱ opens in <span class="badge-opens-in">${opensIn || 'soon'}</span></span>`,
     open:     `<span class="status-badge open pulse-badge close-ticker" data-match-id="${match.id}">🟢 OPEN<span class="badge-close-in">· closes in ${closesIn || '…'}</span></span>`,
     locked:   `<span class="status-badge locked">🔒 CLOSED</span>`,
     live:     `<span class="status-badge live pulse-badge">🔴 LIVE</span>`,
@@ -265,6 +266,7 @@ function buildMatchCard(match) {
         <div class="mc-bar-fill" style="width:${barT1Pct}%; background:${match.team1.color}"></div>
       </div>
       <div class="mc-footer-right">
+        ${status === 'upcoming' ? `<span class="mc-kickoff-hint kickoff-ticker" data-match-id="${match.id}">⏱ kicks off in ${countdown || 'soon'}</span>` : ''}
         ${pickBadge}
         ${actionBtn}
       </div>
@@ -798,17 +800,25 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
     }
 
-    // Countdown tickers — "opens in" on upcoming cards
-    document.querySelectorAll('.time-ticker').forEach(el => {
+    // Prediction-open tickers — "opens in" on upcoming cards
+    document.querySelectorAll('.open-ticker').forEach(el => {
       const matchId = parseInt(el.dataset.matchId);
       const match = MATCHES.find(m => m.id === matchId);
-      if (match) {
-        const status = getMatchStatus(match);
-        if (status === 'upcoming') {
-          el.textContent = `⏱ ${timeUntilMatch(match) || 'Soon'}`;
-        } else if (status === 'open' && Screens.getCurrent() === 'home') {
-          renderHomeScreen();
-        }
+      if (!match) return;
+      if (getMatchStatus(match) === 'upcoming') {
+        const span = el.querySelector('.badge-opens-in');
+        if (span) span.textContent = timeUntilPredictionOpens(match) || 'soon';
+      } else if (Screens.getCurrent() === 'home') {
+        renderHomeScreen();   // window just opened → re-render so the card flips to OPEN
+      }
+    });
+
+    // Kickoff tickers — "kicks off in" on upcoming cards
+    document.querySelectorAll('.kickoff-ticker').forEach(el => {
+      const matchId = parseInt(el.dataset.matchId);
+      const match = MATCHES.find(m => m.id === matchId);
+      if (match && getMatchStatus(match) === 'upcoming') {
+        el.textContent = `⏱ kicks off in ${timeUntilMatch(match) || 'soon'}`;
       }
     });
 

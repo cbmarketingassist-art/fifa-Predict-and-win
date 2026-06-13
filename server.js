@@ -38,10 +38,12 @@ function readBody(req) {
 }
 
 // Mock matches — times tuned for the prediction window:
-// opens 6h before kick-off, closes 30 min before
+// opens 8h before kick-off, closes 30 min before
 function matchesHandler(res) {
   const now = new Date();
-  const fmt  = d => d.toISOString().split('T')[0];
+  // Both date and time must be in IST — mixing a UTC date with an IST time
+  // shifts matches that kick off after IST-midnight back a day (en-CA → YYYY-MM-DD).
+  const fmt  = d => d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
   const fmtT = d => d.toLocaleTimeString('en-IN', { hour12: false, hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' });
 
   const t = now.getTime();
@@ -49,7 +51,7 @@ function matchesHandler(res) {
   const liveDate     = new Date(t - 30 * 60000);   // started 30 min ago → LIVE
   const lockedDate   = new Date(t + 15 * 60000);   // kicks off in 15 min → form CLOSED
   const openDate     = new Date(t + 90 * 60000);   // kicks off in 90 min → OPEN (closes in 60m)
-  const upcomingDate = new Date(t + 9 * 3600000);  // kicks off in 9 h → UPCOMING (opens in 3h)
+  const upcomingDate = new Date(t + 9 * 3600000);  // kicks off in 9 h → UPCOMING (opens in 1h)
 
   const matches = [
     {

@@ -1,9 +1,9 @@
 var MATCHES = []; // var (not let) so window.MATCHES works — db.js reads scores from it
 
 // ── Prediction window (per T&C) ───────────────
-//  Opens 6 hours before kick-off
+//  Opens 8 hours before kick-off
 //  Closes 30 minutes before kick-off
-const PRED_OPEN_MS  = 6 * 60 * 60 * 1000;
+const PRED_OPEN_MS  = 8 * 60 * 60 * 1000;
 const PRED_CLOSE_MS = 30 * 60 * 1000;
 
 async function fetchMatches() {

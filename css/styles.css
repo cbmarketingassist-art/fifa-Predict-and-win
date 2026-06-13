@@ -901,6 +901,18 @@ body::after {
 }
 
 /* Badge variant on match cards */
+.status-badge.upcoming .badge-opens-in {
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.mc-kickoff-hint {
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
 .status-badge.open .badge-close-in {
   font-weight: 600;
   opacity: 0.85;

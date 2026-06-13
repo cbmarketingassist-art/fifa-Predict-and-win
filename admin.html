@@ -343,7 +343,7 @@ function getMatchStatus(match) {
   if (match.statusOverride) return match.statusOverride;
   const now = new Date();
   const start = new Date(match.date + 'T' + match.timeIST + ':00+05:30');
-  const opens = new Date(start - 4*60*60*1000);
+  const opens = new Date(start - 8*60*60*1000);
   const ends  = new Date(start + 2*60*60*1000);
   if (now < opens) return 'upcoming';
   if (now >= opens && now < start) return 'open';
