@@ -769,13 +769,16 @@ window.addEventListener('DOMContentLoaded', async () => {
   setInterval(async () => {
     tickCount++;
 
-    // ── Live-aware refresh: every 15s while a match is live, else 30s ─────
-    // While live we ping /api/live (ESPN→Redis) right before re-fetching, so
-    // goals and the minute land within ~15s. The client is the cron — no paid
-    // Vercel plan needed. GET is throttled server-side (12s shared lock), so
-    // any number of open browsers cap ESPN at ~5 requests/min.
+    // ── Live-aware refresh ────────────────────────────────────────────────
+    // Live match:        every 15 s  (ping ESPN sync + re-fetch)
+    // Open/locked match: every 60 s  (predictions are active)
+    // Idle (no match):   every 300 s (5 min — nothing to update)
     const hasLiveMatch = MATCHES.some(m => getMatchStatus(m) === 'live');
-    const refreshEvery = hasLiveMatch ? 15 : 30;
+    const hasActiveMatch = hasLiveMatch || MATCHES.some(m => {
+      const s = getMatchStatus(m);
+      return s === 'open' || s === 'locked';
+    });
+    const refreshEvery = hasLiveMatch ? 15 : (hasActiveMatch ? 60 : 300);
     if (tickCount % refreshEvery === 0) {
       if (hasLiveMatch) {
         try { await fetch('/api/live'); } catch (e) { /* silent — admin can force-sync */ }
